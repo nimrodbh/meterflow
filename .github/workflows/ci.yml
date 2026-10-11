@@ -1,0 +1,25 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: C core (build with sanitizers, run tests)
+        run: |
+          make -C core test
+          make -C core build/libaggregator.so
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check .
+      - name: Tests (includes C vs Python equivalence)
+        run: pytest -q
+      - name: Benchmark
+        run: python -m meterflow.cli bench --n 500000

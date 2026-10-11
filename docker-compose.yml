@@ -1,0 +1,40 @@
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 10
+
+  api:
+    build: .
+    command: python -m meterflow.cli serve
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DB_PATH: /data/meterflow.db
+    volumes: ["data:/data"]
+    ports: ["8000:8000"]
+    depends_on:
+      redis: {condition: service_healthy}
+
+  consumer:
+    build: .
+    command: python -m meterflow.cli consume
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DB_PATH: /data/meterflow.db
+    volumes: ["data:/data"]
+    depends_on:
+      redis: {condition: service_healthy}
+
+  generator:
+    build: .
+    command: python -m meterflow.cli generate --n 100000 --customers 500 --seed 1
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis: {condition: service_healthy}
+    profiles: ["demo"]
+
+volumes:
+  data:
